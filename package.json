@@ -1,9 +1,11 @@
 {
   "name": "agent-manager",
   "version": "1.0.0",
-  "description": "OpenClaw plugin for the Agent Manager API — agents, tasks, cron, skills, contexts, integrations, Gmail, calendar, secrets, and Garage feed.",
+  "description": "OpenClaw plugin for the Agent Manager API — tasks, cron, contexts, integrations, Gmail, calendar, secrets, and Garage feed.",
   "openclaw": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.0"

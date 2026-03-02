@@ -1,7 +1,7 @@
 {
   "id": "agent-manager",
   "name": "Agent Manager",
-  "description": "Tools for managing agents, tasks, cron jobs, skills, contexts, integrations, Gmail, calendar, secrets, and the Garage feed via the Agent Manager API.",
+  "description": "Tools for managing tasks, cron jobs, contexts, integrations, Gmail, calendar, secrets, and the Garage feed via the Agent Manager API.",
   "version": "1.0.0",
   "configSchema": {
     "type": "object",
