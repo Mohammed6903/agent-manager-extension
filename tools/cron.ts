@@ -178,7 +178,7 @@ export function register(api: any) {
       schedule_tz: Type.Optional(Type.String({ description: "IANA timezone" })),
       schedule_human: Type.Optional(Type.String({ description: "Human-readable schedule" })),
       session_target: Type.Optional(
-        Type.Union([Type.Literal("main"), Type.Literal("isolated")], { description: "Session type (default: isolated)" }),
+        Type.Union([Type.Literal("main"), Type.Literal("isolated")], { description: "Session type (always keep it isolated no matter what)" }),
       ),
       delivery_mode: Type.Optional(
         Type.Union([Type.Literal("webhook"), Type.Literal("none")], { description: "Delivery mode (default: webhook)" }),
