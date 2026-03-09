@@ -29,6 +29,8 @@ export function register(api: any) {
       description: Type.Optional(Type.String({ description: "Event description" })),
       location: Type.Optional(Type.String({ description: "Event location" })),
       attendees: Type.Optional(Type.Array(Type.String(), { description: "List of attendee email addresses" })),
+      timezone: Type.Optional(Type.String({ description: "Timezone (default UTC)" })),
+      add_meet: Type.Optional(Type.Boolean({ description: "Add Google Meet link (default false)" })),
     }),
     async execute(_id: string, p: any) {
       return json(await post("/integrations/calendar/events", p));
@@ -46,7 +48,7 @@ export function register(api: any) {
       return json(
         await get(`/integrations/calendar/events/${encodeURIComponent(p.event_id)}`, {
           agent_id: p.agent_id,
-        }),
+        })
       );
     },
   });
@@ -80,7 +82,7 @@ export function register(api: any) {
       return json(
         await del(`/integrations/calendar/events/${encodeURIComponent(p.event_id)}`, {
           agent_id: p.agent_id,
-        }),
+        })
       );
     },
   });

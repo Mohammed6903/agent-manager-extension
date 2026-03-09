@@ -3,7 +3,7 @@
  *
  * Registers all agent-manager tools with the OpenClaw Gateway.
  * Tools are namespaced by domain: tasks, cron, contexts,
- * integrations, gmail, calendar, auth, secrets, and garage.
+ * integrations, gmail, calendar, sheets, drive, auth, secrets, and garage.
  */
 
 import { register as registerTasks } from "./tools/tasks";
@@ -12,6 +12,9 @@ import { register as registerContexts } from "./tools/contexts";
 import { register as registerIntegrations } from "./tools/integrations";
 import { register as registerGmail } from "./tools/integrations/gmail";
 import { register as registerCalendar } from "./tools/integrations/calendar";
+import { register as registerSheets } from "./tools/integrations/sheets";
+import { register as registerDocs } from "./tools/integrations/docs";
+import { register as registerDrive } from "./tools/integrations/drive";
 import { register as registerAuth } from "./tools/auth";
 import { register as registerSecrets } from "./tools/secrets";
 import { register as registerGarage } from "./tools/garage";
@@ -26,6 +29,9 @@ export function register(api: any) {
   registerIntegrations(api);
   registerGmail(api);
   registerCalendar(api);
+  registerSheets(api);
+  registerDrive(api);
+  registerDocs(api);
   registerAuth(api);
   registerSecrets(api);
   registerGarage(api);
