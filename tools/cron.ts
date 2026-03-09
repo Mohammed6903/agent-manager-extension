@@ -8,9 +8,15 @@ function json(data: unknown) {
 const PipelineTask = Type.Object({
   name: Type.String({ description: "Short name for this pipeline step" }),
   description: Type.String({ description: "Operational detail: exact API call, headers, body shape, and success criterion" }),
-  status: Type.Optional(Type.String({ description: "Initial status (default: pending)" })),
-  integrations: Type.Optional(Type.Array(Type.String(), { description: "Integration names this step uses" })),
-  context_sources: Type.Optional(Type.Array(Type.String(), { description: "Context sources for this step" })),
+  status: Type.Optional(Type.Union([
+    Type.Literal("pending"),
+    Type.Literal("running"),
+    Type.Literal("success"),
+    Type.Literal("error"),
+  ], { description: "Task execution status (default: pending)" })),
+  error: Type.Optional(Type.String({ description: "Concise error description if status=error; omit if success" })),
+  integrations: Type.Optional(Type.Array(Type.String(), { description: "Exact integration names this task actually used during execution" })),
+  context_sources: Type.Optional(Type.Array(Type.String(), { description: "Exact context sources this task actually used during execution" })),
 });
 
 const PipelineTemplate = Type.Object({
@@ -31,7 +37,7 @@ export function register(api: any) {
 
   api.registerTool({
     name: "cron_create",
-    description: "Schedule a recurring or one-time job that an agent will execute on the defined schedule.",
+    description: "Schedule a recurring or one-time job that an agent will execute on the defined schedule. IMPORTANT: Use pipeline_template for all integration/multi-step workflows to ensure webhook compatibility and structured execution results.",
     parameters: Type.Object({
       name: Type.String({ description: "Human-readable job name shown in the dashboard" }),
       agent_id: Type.String({ description: "Which agent will execute this job" }),
@@ -41,7 +47,7 @@ export function register(api: any) {
         Type.Literal("cron"),
       ], { description: "Schedule type: 'at' (one-time ISO timestamp), 'every' (interval like 5m/1h), 'cron' (cron expression)" }),
       schedule_expr: Type.String({ description: "Schedule expression matching the kind (ISO timestamp, duration string, or cron expression)" }),
-      payload_message: Type.String({ description: "Full operational prompt the agent receives — must be self-contained with exact steps, API calls, and success criteria" }),
+      payload_message: Type.String({ description: "Base operational prompt the agent receives. If pipeline_template is provided, the agent will receive extended instructions on pipeline execution rules and must output a pipeline_result block." }),
       user_id: Type.String({ description: "Owner user ID for dashboard visibility" }),
       session_id: Type.String({ description: "Owner session ID for dashboard visibility" }),
       schedule_tz: Type.Optional(Type.String({ description: "IANA timezone for cron kind (e.g. Asia/Kolkata)" })),
@@ -58,7 +64,7 @@ export function register(api: any) {
       ),
       enabled: Type.Optional(Type.Boolean({ description: "Whether the job starts enabled (default true)" })),
       delete_after_run: Type.Optional(Type.Boolean({ description: "Auto-delete after first execution (default false, useful for 'at' jobs)" })),
-      pipeline_template: Type.Optional(PipelineTemplate),
+      pipeline_template: PipelineTemplate,
     }),
     async execute(_id: string, p: any) {
       return json(await post("/crons", p));
