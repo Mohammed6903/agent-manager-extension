@@ -17,6 +17,7 @@ import { register as registerSheets } from "./tools/integrations/sheets";
 import { register as registerDocs } from "./tools/integrations/docs";
 import { register as registerDrive } from "./tools/integrations/drive";
 import { register as registerTwitter } from "./tools/integrations/twitter";
+import { register as registerLinkedIn } from "./tools/integrations/linkedin";
 import { register as registerAuth } from "./tools/auth";
 import { register as registerSecrets } from "./tools/secrets";
 import { register as registerGarage } from "./tools/garage";
@@ -36,6 +37,7 @@ export function register(api: any) {
   registerDrive(api);
   registerDocs(api);
   registerTwitter(api);
+  registerLinkedIn(api);
   registerAuth(api);
   registerSecrets(api);
   registerGarage(api);
