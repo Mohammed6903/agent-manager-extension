@@ -58,6 +58,7 @@ export function register(api: any) {
     description: "List tasks to see current work status, optionally filtered by agent or status.",
     parameters: Type.Object({
       agent_id: Type.Optional(Type.String({ description: "Filter by agent ID" })),
+      user_id: Type.Optional(Type.String({ description: "Filter by user ID — pass the user_id from session metadata to only see this user's tasks" })),
       status: Type.Optional(Type.String({ description: "Filter by status (assigned, in_progress, completed, error)" })),
     }),
     async execute(_id: string, p: any) {
