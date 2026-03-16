@@ -26,6 +26,8 @@ export function register(api: any) {
     description: "Create a task to track multi-step work and give the user live visibility into progress.",
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent responsible for this task" }),
+      user_id: Type.String({ description: "User creating the task" }),
+      session_id: Type.String({ description: "Session identifier" }),
       title: Type.String({ description: "Short descriptive title for the task" }),
       description: Type.Optional(Type.String({ description: "Detailed description of what will be done and why" })),
       status: Type.Optional(
@@ -57,8 +59,8 @@ export function register(api: any) {
     name: "task_list",
     description: "List tasks to see current work status, optionally filtered by agent or status.",
     parameters: Type.Object({
+      user_id: Type.String({ description: "User ID — required by API" }),
       agent_id: Type.Optional(Type.String({ description: "Filter by agent ID" })),
-      user_id: Type.Optional(Type.String({ description: "Filter by user ID — pass the user_id from session metadata to only see this user's tasks" })),
       status: Type.Optional(Type.String({ description: "Filter by status (assigned, in_progress, completed, error)" })),
     }),
     async execute(_id: string, p: any) {
@@ -82,6 +84,8 @@ export function register(api: any) {
     description: "Update a task's status, sub-tasks, or report issues as work progresses.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task's unique identifier" }),
+      user_id: Type.String({ description: "User updating the task" }),
+      session_id: Type.String({ description: "Session identifier" }),
       title: Type.Optional(Type.String({ description: "Updated title" })),
       description: Type.Optional(Type.String({ description: "Updated description" })),
       status: Type.Optional(
