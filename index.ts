@@ -25,9 +25,9 @@ import { register as registerGarage } from "./tools/garage";
 export const id = "agent-manager";
 export const name = "Agent Manager";
 
-const PRODUCT = process.env.PRODUCT_TYPE || "garage"; // "garage" | "network_chain"
-
 export function register(api: any) {
+  const product = api.config?.productType || "garage";
+
   registerTasks(api);
   registerCron(api);
   registerContexts(api);
@@ -42,7 +42,7 @@ export function register(api: any) {
   registerLinkedIn(api);
   registerAuth(api);
   registerSecrets(api);
-  if (PRODUCT === "garage") {
+  if (product === "garage") {
     registerGarage(api);
   }
 }

@@ -10,6 +10,11 @@
       "baseUrl": {
         "type": "string",
         "description": "Agent Manager API base URL (default: http://localhost:8000/api)"
+      },
+      "productType": {
+        "type": "string",
+        "enum": ["garage", "network_chain"],
+        "description": "Product type — controls which tools are registered (default: garage)"
       }
     }
   },
