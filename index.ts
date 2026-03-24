@@ -21,6 +21,7 @@ import { register as registerLinkedIn } from "./tools/integrations/linkedin";
 import { register as registerAuth } from "./tools/auth";
 import { register as registerSecrets } from "./tools/secrets";
 import { register as registerGarage } from "./tools/garage";
+import { register as registerChatDelivery } from "./tools/chat-delivery";
 
 export const id = "agent-manager";
 export const name = "Agent Manager";
@@ -44,6 +45,9 @@ export function register(api: any) {
   registerSecrets(api);
   if (product === "garage") {
     registerGarage(api);
+  }
+  if (product === "network_chain") {
+    registerChatDelivery(api);
   }
 }
 
