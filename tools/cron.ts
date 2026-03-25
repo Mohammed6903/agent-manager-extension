@@ -88,9 +88,10 @@ export function register(api: any) {
     description: "Get the configuration and current status of a specific cron job.",
     parameters: Type.Object({
       job_id: Type.String({ description: "The cron job's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/crons/${encodeURIComponent(p.job_id)}`));
+      return json(await get(`/crons/${encodeURIComponent(p.job_id)}`, { user_id: p.user_id }));
     },
   });
 
@@ -99,6 +100,7 @@ export function register(api: any) {
     description: "Update the schedule, payload, or enabled status of an existing cron job.",
     parameters: Type.Object({
       job_id: Type.String({ description: "The cron job's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
       schedule_kind: Type.Optional(
         Type.Union([Type.Literal("at"), Type.Literal("every"), Type.Literal("cron")], {
           description: "New schedule type",
@@ -110,8 +112,8 @@ export function register(api: any) {
       enabled: Type.Optional(Type.Boolean({ description: "Enable or disable the job" })),
     }),
     async execute(_id: string, p: any) {
-      const { job_id, ...body } = p;
-      return json(await patch(`/crons/${encodeURIComponent(job_id)}`, body));
+      const { job_id, user_id, ...body } = p;
+      return json(await patch(`/crons/${encodeURIComponent(job_id)}`, body, { user_id }));
     },
   });
 
@@ -120,9 +122,10 @@ export function register(api: any) {
     description: "Remove a scheduled job that is no longer needed.",
     parameters: Type.Object({
       job_id: Type.String({ description: "The cron job's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await del(`/crons/${encodeURIComponent(p.job_id)}`));
+      return json(await del(`/crons/${encodeURIComponent(p.job_id)}`, { user_id: p.user_id }));
     },
   });
 
@@ -131,9 +134,10 @@ export function register(api: any) {
     description: "Immediately execute a cron job without waiting for its next scheduled run.",
     parameters: Type.Object({
       job_id: Type.String({ description: "The cron job's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await post(`/crons/${encodeURIComponent(p.job_id)}/trigger`));
+      return json(await post(`/crons/${encodeURIComponent(p.job_id)}/trigger`, undefined, { user_id: p.user_id }));
     },
   });
 
@@ -142,11 +146,12 @@ export function register(api: any) {
     description: "View the execution history and results for a cron job.",
     parameters: Type.Object({
       job_id: Type.String({ description: "The cron job's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
       limit: Type.Optional(Type.Integer({ description: "Max runs to return (default 20)" })),
     }),
     async execute(_id: string, p: any) {
-      const { job_id, ...params } = p;
-      return json(await get(`/crons/${encodeURIComponent(job_id)}/runs`, params));
+      const { job_id, user_id, ...params } = p;
+      return json(await get(`/crons/${encodeURIComponent(job_id)}/runs`, { ...params, user_id }));
     },
   });
 
@@ -155,9 +160,10 @@ export function register(api: any) {
     description: "Get full details of a cron job including its configuration and recent run history.",
     parameters: Type.Object({
       job_id: Type.String({ description: "The cron job's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/crons/${encodeURIComponent(p.job_id)}/detail`));
+      return json(await get(`/crons/${encodeURIComponent(p.job_id)}/detail`, { user_id: p.user_id }));
     },
   });
 

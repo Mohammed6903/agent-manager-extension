@@ -69,9 +69,11 @@ export function register(api: any) {
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent to assign the context to" }),
       context_id: Type.String({ description: "The context's UUID to assign" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await post("/contexts/assign", p));
+      const { user_id, ...body } = p;
+      return json(await post("/contexts/assign", body, { user_id }));
     },
   });
 
@@ -81,11 +83,13 @@ export function register(api: any) {
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent's unique identifier" }),
       context_id: Type.String({ description: "The context's UUID to unassign" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
       return json(
         await del(
           `/contexts/unassign/${encodeURIComponent(p.agent_id)}/${encodeURIComponent(p.context_id)}`,
+          { user_id: p.user_id },
         ),
       );
     },
@@ -96,9 +100,10 @@ export function register(api: any) {
     description: "List all knowledge contexts currently assigned to a specific agent.",
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/contexts/agent/${encodeURIComponent(p.agent_id)}`));
+      return json(await get(`/contexts/agent/${encodeURIComponent(p.agent_id)}`, { user_id: p.user_id }));
     },
   });
 

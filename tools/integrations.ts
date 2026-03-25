@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import { get, post } from "../client";
+import { get, post, del } from "../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -9,9 +9,11 @@ export function register(api: any) {
   api.registerTool({
     name: "integration_list",
     description: "List all hardcoded integrations available in the system.",
-    parameters: Type.Object({}),
-    async execute() {
-      return json(await get("/integrations"));
+    parameters: Type.Object({
+      user_id: Type.String({ description: "User ID — required for scoping connected_agents" }),
+    }),
+    async execute(_id: string, p: any) {
+      return json(await get("/integrations", { user_id: p.user_id }));
     },
   });
 
@@ -32,6 +34,7 @@ export function register(api: any) {
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent to assign the integration to" }),
       integration_name: Type.String({ description: "Name of the integration to assign" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
       credentials: Type.Optional(
         Type.Record(Type.String(), Type.String(), {
           description:
@@ -40,7 +43,8 @@ export function register(api: any) {
       ),
     }),
     async execute(_id: string, p: any) {
-      return json(await post("/integrations/assign", p));
+      const { user_id, ...body } = p;
+      return json(await post("/integrations/assign", body, { user_id }));
     },
   });
 
@@ -49,9 +53,10 @@ export function register(api: any) {
     description: "List all integrations assigned to a specific agent.",
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/integrations/agent/${encodeURIComponent(p.agent_id)}`));
+      return json(await get(`/integrations/agent/${encodeURIComponent(p.agent_id)}`, { user_id: p.user_id }));
     },
   });
 
@@ -63,6 +68,23 @@ export function register(api: any) {
     }),
     async execute(_id: string, p: any) {
       return json(await get(`/integrations/${encodeURIComponent(p.integration_name)}/logs`));
+    },
+  });
+
+  api.registerTool({
+    name: "integration_unassign",
+    description: "Remove an integration assignment from an agent.",
+    parameters: Type.Object({
+      agent_id: Type.String({ description: "The agent's unique identifier" }),
+      integration_name: Type.String({ description: "Name of the integration to unassign" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
+    }),
+    async execute(_id: string, p: any) {
+      return json(await del("/integrations/unassign", {
+        agent_id: p.agent_id,
+        integration_name: p.integration_name,
+        user_id: p.user_id,
+      }));
     },
   });
 }

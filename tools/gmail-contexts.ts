@@ -11,9 +11,10 @@ export function register(api: any) {
     description: "List all third party contexts assigned to an agent.",
     parameters: Type.Object({
       agent_id: Type.String({ description: "The agent's ID to list contexts for" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/contexts/third-party?agent_id=${encodeURIComponent(p.agent_id)}`));
+      return json(await get("/contexts/third-party", { agent_id: p.agent_id, user_id: p.user_id }));
     },
   });
 
@@ -22,9 +23,10 @@ export function register(api: any) {
     description: "Get a specific Third Party context by its ID with status information.",
     parameters: Type.Object({
       context_id: Type.String({ description: "The context UUID" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/contexts/third-party/${encodeURIComponent(p.context_id)}`));
+      return json(await get(`/contexts/third-party/${encodeURIComponent(p.context_id)}`, { user_id: p.user_id }));
     },
   });
 
@@ -33,9 +35,10 @@ export function register(api: any) {
     description: "Delete a Third Party context and its associated data (S3, Qdrant, DB).",
     parameters: Type.Object({
       context_id: Type.String({ description: "The context UUID to delete" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await del(`/contexts/third-party/${encodeURIComponent(p.context_id)}`));
+      return json(await del(`/contexts/third-party/${encodeURIComponent(p.context_id)}`, { user_id: p.user_id }));
     },
   });
 

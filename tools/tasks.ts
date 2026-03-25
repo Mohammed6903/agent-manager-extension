@@ -73,9 +73,10 @@ export function register(api: any) {
     description: "Get the full details and current status of a specific task.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await get(`/tasks/${encodeURIComponent(p.task_id)}`));
+      return json(await get(`/tasks/${encodeURIComponent(p.task_id)}`, { user_id: p.user_id }));
     },
   });
 
@@ -109,8 +110,8 @@ export function register(api: any) {
       issues: Type.Optional(Type.Array(TaskIssue, { description: "Updated issues list" })),
     }),
     async execute(_id: string, p: any) {
-      const { task_id, ...body } = p;
-      return json(await patch(`/tasks/${encodeURIComponent(task_id)}`, body));
+      const { task_id, user_id, ...body } = p;
+      return json(await patch(`/tasks/${encodeURIComponent(task_id)}`, body, { user_id }));
     },
   });
 
@@ -119,9 +120,10 @@ export function register(api: any) {
     description: "Remove a task that is no longer relevant or was created by mistake.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
     }),
     async execute(_id: string, p: any) {
-      return json(await del(`/tasks/${encodeURIComponent(p.task_id)}`));
+      return json(await del(`/tasks/${encodeURIComponent(p.task_id)}`, { user_id: p.user_id }));
     },
   });
 
@@ -130,12 +132,15 @@ export function register(api: any) {
     description: "Mark a specific issue on a task as resolved after a blocker has been addressed.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task's unique identifier" }),
+      user_id: Type.String({ description: "User ID — required for ownership verification" }),
       issue_index: Type.Integer({ description: "Zero-based index of the issue to resolve" }),
     }),
     async execute(_id: string, p: any) {
       return json(
         await patch(
           `/tasks/${encodeURIComponent(p.task_id)}/issues/${p.issue_index}/resolve`,
+          undefined,
+          { user_id: p.user_id },
         ),
       );
     },
