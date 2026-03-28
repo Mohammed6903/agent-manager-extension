@@ -14,7 +14,7 @@
       "productType": {
         "type": "string",
         "enum": ["garage", "network_chain"],
-        "description": "Product type — controls which tools are registered (default: garage)"
+        "description": "Product type — controls which tools are registered. 'garage' includes Garage feed tools, 'network_chain' includes chat delivery tools. Default: garage"
       }
     }
   },
@@ -22,6 +22,10 @@
     "baseUrl": {
       "label": "API Base URL",
       "placeholder": "http://localhost:8000/api"
+    },
+    "productType": {
+      "label": "Product Type",
+      "placeholder": "garage"
     }
   }
 }

@@ -1,11 +1,20 @@
 /**
  * Shared HTTP client for the Agent Manager API.
  *
- * Reads the base URL from the `AGENT_MANAGER_URL` environment variable,
- * falling back to `http://localhost:8000/api`.
+ * Initialised from the plugin's injected config (api.config.baseUrl)
+ * with a fallback to the AGENT_MANAGER_URL env var and finally localhost.
  */
 
-const BASE_URL = (process.env.AGENT_MANAGER_URL || "http://localhost:8000/api").replace(/\/+$/, "");
+let BASE_URL = (process.env.AGENT_MANAGER_URL || "http://localhost:8000/api").replace(/\/+$/, "");
+
+/**
+ * Called once from the plugin entry point to apply config from OpenClaw.
+ */
+export function configure(config: { baseUrl?: string }) {
+  if (config.baseUrl) {
+    BASE_URL = config.baseUrl.replace(/\/+$/, "");
+  }
+}
 
 export interface RequestOptions {
   params?: Record<string, string | number | boolean | undefined | null>;

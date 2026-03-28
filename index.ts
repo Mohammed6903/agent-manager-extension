@@ -3,9 +3,10 @@
  *
  * Registers all agent-manager tools with the OpenClaw Gateway.
  * Tools are namespaced by domain: tasks, cron, contexts,
- * integrations, gmail, calendar, sheets, drive, auth, secrets, and garage.
+ * integrations, gmail, calendar, sheets, drive, auth, secrets, notion, and garage.
  */
 
+import { configure } from "./client";
 import { register as registerTasks } from "./tools/tasks";
 import { register as registerCron } from "./tools/cron";
 import { register as registerContexts } from "./tools/contexts";
@@ -18,6 +19,7 @@ import { register as registerDocs } from "./tools/integrations/docs";
 import { register as registerDrive } from "./tools/integrations/drive";
 import { register as registerTwitter } from "./tools/integrations/twitter";
 import { register as registerLinkedIn } from "./tools/integrations/linkedin";
+import { register as registerNotion } from "./tools/integrations/notion";
 import { register as registerAuth } from "./tools/auth";
 import { register as registerSecrets } from "./tools/secrets";
 import { register as registerGarage } from "./tools/garage";
@@ -27,7 +29,11 @@ export const id = "agent-manager";
 export const name = "Agent Manager";
 
 export function register(api: any) {
-  const product = api.config?.productType || "garage";
+  // Apply injected config from OpenClaw (openclaw.json → plugins.entries.agent-manager.config)
+  const config = api.config || {};
+  configure({ baseUrl: config.baseUrl });
+
+  const product = config.productType || "garage";
 
   registerTasks(api);
   registerCron(api);
@@ -41,6 +47,7 @@ export function register(api: any) {
   registerDocs(api);
   registerTwitter(api);
   registerLinkedIn(api);
+  registerNotion(api);
   registerAuth(api);
   registerSecrets(api);
   if (product === "garage") {
