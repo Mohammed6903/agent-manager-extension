@@ -24,6 +24,7 @@ import { register as registerAuth } from "./tools/auth";
 import { register as registerSecrets } from "./tools/secrets";
 import { register as registerGarage } from "./tools/garage";
 import { register as registerChatDelivery } from "./tools/chat-delivery";
+import { register as registerVoiceCall } from "./tools/voice-call";
 
 export const id = "agent-manager";
 export const name = "Agent Manager";
@@ -33,7 +34,7 @@ export function register(api: any) {
   const config = api.config || {};
   configure({ baseUrl: config.baseUrl });
 
-  const product = config.productType || "garage";
+  const product = config.productType || "network_chain";
 
   registerTasks(api);
   registerCron(api);
