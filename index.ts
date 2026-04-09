@@ -147,6 +147,7 @@ export function register(api: any) {
   registerSearchConsole(api);
   registerAuth(api);
   registerSecrets(api);
+  registerVoiceCall(api);
   if (product === "garage") {
     registerGarage(api);
   }
