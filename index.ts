@@ -6,7 +6,7 @@
  * integrations, gmail, calendar, sheets, drive, auth, secrets, notion, and garage.
  */
 
-import { configure } from "./client";
+import { configure, triggerAgentIntegrationsRefresh } from "./client";
 import { register as registerTasks } from "./tools/tasks";
 import { register as registerCron } from "./tools/cron";
 import { register as registerContexts } from "./tools/contexts";
@@ -147,11 +147,50 @@ export function register(api: any) {
   registerSearchConsole(api);
   registerAuth(api);
   registerSecrets(api);
+  registerVoiceCall(api);
   if (product === "garage") {
     registerGarage(api);
   }
   if (product === "network_chain") {
     registerChatDelivery(api);
+  }
+
+  // Internal HTTP route for backend → plugin cache invalidation. The
+  // backend's IntegrationRepository fires a fire-and-forget POST to
+  //   /agent-manager/refresh-integrations/<agentId>
+  // immediately after assigning or unassigning an integration, so the
+  // plugin's per-agent cache reflects the change on the very next model
+  // attempt instead of waiting for the 5s TTL. Loopback-only by virtue
+  // of the gateway binding to localhost; auth: "plugin" means the gateway
+  // does not require its own token for this path.
+  if (typeof api.registerHttpRoute === "function") {
+    api.registerHttpRoute({
+      path: "/agent-manager/refresh-integrations",
+      match: "prefix",
+      auth: "plugin",
+      handler: async (req: any, res: any) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.setHeader("Content-Type", "text/plain");
+          res.end("method not allowed");
+          return true;
+        }
+        const url = new URL(req.url ?? "/", "http://localhost");
+        const m = url.pathname.match(/\/agent-manager\/refresh-integrations\/([^/]+)\/?$/);
+        if (!m) {
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: "missing agent id in path" }));
+          return true;
+        }
+        const agentId = decodeURIComponent(m[1]);
+        triggerAgentIntegrationsRefresh(agentId);
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: true, agentId }));
+        return true;
+      },
+    });
   }
 }
 

@@ -1,12 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { get, post, put, del } from "../../client";
+import { get, post, put, del, getAgentIntegrationsSync } from "../../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+
+const INTEGRATION_NAME = "google_calendar";
+
+const INTEGRATION_TOOLS: any[] = [
+{
     name: "calendar_list_events",
     description: "List upcoming Google Calendar events for an agent.",
     parameters: Type.Object({
@@ -16,9 +19,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/calendar/events", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "calendar_create_event",
     description: "Create a new Google Calendar event.",
     parameters: Type.Object({
@@ -35,9 +37,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/calendar/events", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "calendar_get_event",
     description: "Get the full details of a specific Google Calendar event.",
     parameters: Type.Object({
@@ -51,9 +52,8 @@ export function register(api: any) {
         })
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "calendar_update_event",
     description: "Update an existing Google Calendar event.",
     parameters: Type.Object({
@@ -69,9 +69,8 @@ export function register(api: any) {
       const { event_id, ...body } = p;
       return json(await put(`/integrations/calendar/events/${encodeURIComponent(event_id)}`, body));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "calendar_delete_event",
     description: "Delete a Google Calendar event.",
     parameters: Type.Object({
@@ -85,5 +84,16 @@ export function register(api: any) {
         })
       );
     },
+  }
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose these tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    if (cached === null) return INTEGRATION_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? INTEGRATION_TOOLS : null;
   });
 }

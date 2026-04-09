@@ -13,7 +13,21 @@ export function register(api: any) {
       "The call uses Voxtral TTS/STT for natural voice quality and connects back " +
       "to this agent for the conversation. Use for time-sensitive notifications, " +
       "interactive briefings, or when the user explicitly asks you to call them. " +
-      "The phone number must be in E.164 format (e.g. '+918689908731').",
+      "The phone number must be in E.164 format (e.g. '+918689908731').\n\n" +
+      "IDEMPOTENCY CONTRACT (very important — read carefully):\n" +
+      "  - This tool returns IMMEDIATELY after dialing succeeds. The response " +
+      "    contains call_id, state, and a `message` field. SUCCESS is implied " +
+      "    by the absence of an error response — there is no separate 'success' " +
+      "    field to check.\n" +
+      "  - DO NOT CALL THIS TOOL AGAIN for the same number while a previous call " +
+      "    is in progress. The system will detect duplicates (same number + agent " +
+      "    within 5 minutes) and return `deduped: true` instead of dialing again, " +
+      "    but you should not even try.\n" +
+      "  - If you need to know what's happening on a call, use get_voice_call " +
+      "    with the call_id from the response. Don't re-call make_phone_call.\n" +
+      "  - After receiving a successful response, your next message to the user " +
+      "    should be brief: 'I've placed the call' or similar. Do not dial again " +
+      "    just because the call is still ringing.",
     parameters: Type.Object({
       to: Type.String({
         description: "Destination phone number in E.164 format, e.g. '+918689908731'",

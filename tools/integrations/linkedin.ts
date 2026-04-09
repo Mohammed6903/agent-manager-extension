@@ -1,12 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { get, post, del } from "../../client";
+import { get, post, del, getAgentIntegrationsSync } from "../../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+
+const INTEGRATION_NAME = "linkedin";
+
+const INTEGRATION_TOOLS: any[] = [
+{
     name: "linkedin_userinfo_get",
     description: "Get the authenticated LinkedIn user's info via OpenID Connect /userinfo endpoint. Returns sub (person ID), name, given_name, family_name, picture, and locale. Use the 'sub' field as the author_urn when creating posts.",
     parameters: Type.Object({
@@ -15,9 +18,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/linkedin/userinfo", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "linkedin_ugc_post_create",
     description: "Create a new LinkedIn post. Before calling this, use linkedin_userinfo_get to get the user's 'sub' field and pass it as author_urn (e.g. 'urn:li:person:abc123' or just 'abc123' — both are accepted). Returns 'id', 'shareUrn' (use this for deletion), and 'ugcPostUrn'.",
     parameters: Type.Object({
@@ -28,9 +30,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/linkedin/ugcPosts", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "linkedin_ugc_post_get",
     description: "Get a specific LinkedIn post by URN. Pass the shareUrn or ugcPostUrn returned from linkedin_ugc_post_create.",
     parameters: Type.Object({
@@ -42,9 +43,8 @@ export function register(api: any) {
         await get(`/integrations/linkedin/ugcPosts/${encodeURIComponent(p.ugc_post_urn)}`, p)
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "linkedin_ugc_post_delete",
     description: "Delete a specific LinkedIn post by URN. IMPORTANT: always pass the 'shareUrn' (urn:li:share:...) returned from linkedin_ugc_post_create, not the ugcPostUrn. Passing the wrong URN type will fail.",
     parameters: Type.Object({
@@ -56,9 +56,8 @@ export function register(api: any) {
         await del(`/integrations/linkedin/ugcPosts/${encodeURIComponent(p.ugc_post_urn)}`, p)
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "linkedin_connections_get",
     description: "Get first-degree LinkedIn connections. Requires the r_network scope — this is a restricted LinkedIn permission that must be explicitly approved for your app. Will return a permissions error if not granted.",
     parameters: Type.Object({
@@ -67,9 +66,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/linkedin/connections", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "linkedin_organizations_get",
     description: "Get LinkedIn organizations the authenticated user administers.",
     parameters: Type.Object({
@@ -78,9 +76,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/linkedin/organizations", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "linkedin_image_upload_initialize",
     description: "Initialize a LinkedIn image upload using the current Images API. Returns an uploadUrl and image URN. Upload the image binary to uploadUrl, then use the image URN when creating a post with media.",
     parameters: Type.Object({
@@ -90,5 +87,16 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/linkedin/images/initialize", p));
     },
+  }
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose these tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    if (cached === null) return INTEGRATION_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? INTEGRATION_TOOLS : null;
   });
 }

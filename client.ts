@@ -1,11 +1,18 @@
 /**
  * Shared HTTP client for the Agent Manager API.
  *
- * Initialised from the plugin's injected config (api.config.baseUrl)
- * with a fallback to the AGENT_MANAGER_URL env var and finally localhost.
+ * Initialised from the plugin's injected config (api.config.baseUrl) at
+ * plugin load time. The hardcoded default below is only used if no
+ * baseUrl is injected, which shouldn't happen in production because
+ * openclaw.json plugin entries always set it.
+ *
+ * Do not introduce environment variable lookups in this file. The
+ * openclaw plugin installer's static scanner rejects modules that
+ * combine env var access with network sends (treats it as a credential
+ * harvesting pattern). The injected config covers all real cases.
  */
 
-let BASE_URL = (process.env.AGENT_MANAGER_URL || "http://localhost:8000/api").replace(/\/+$/, "");
+let BASE_URL = "http://localhost:8000/api";
 
 /**
  * Called once from the plugin entry point to apply config from OpenClaw.
@@ -81,4 +88,80 @@ export function put(path: string, body?: unknown, params?: RequestOptions["param
 
 export function del(path: string, params?: RequestOptions["params"]) {
   return request("DELETE", path, { params });
+}
+
+// ── Per-agent integration cache ───────────────────────────────────────
+//
+// Plugin tool factories run synchronously per model attempt (verified at
+// openclaw/dist/tools-l2IKeN5J.js:80 — `entry.factory(params.context)`
+// is called directly, Promises are NOT awaited). We cannot do async HTTP
+// from inside a factory, so we keep a per-agent in-memory cache of
+// connected integration names and refresh it lazily in the background.
+//
+// Strategy: stale-while-revalidate with a 5s TTL, plus active push
+// invalidation from the backend via the /agent-manager/refresh-integrations
+// HTTP route registered in index.ts. The push path is the fast path —
+// when the backend assigns or unassigns an integration, the next factory
+// call after the push completes sees the fresh data immediately. The TTL
+// is the safety net for missed/dropped pushes.
+
+const REFRESH_INTERVAL_MS = 5000;
+const _agentIntegrationsCache = new Map<string, { names: Set<string>; fetchedAt: number }>();
+const _agentIntegrationsInFlight = new Map<string, Promise<void>>();
+
+/**
+ * Trigger an asynchronous refresh of an agent's connected-integration list.
+ *
+ * Idempotent: concurrent calls for the same agent are de-duplicated. The
+ * refresh updates the cache in-place when complete; failures are logged
+ * but never throw, so the existing cached value (if any) is preserved.
+ *
+ * Exported so the HTTP invalidation route in index.ts can call it from
+ * the backend's push handler.
+ */
+export function triggerAgentIntegrationsRefresh(agentId: string): void {
+  if (!agentId) return;
+  if (_agentIntegrationsInFlight.has(agentId)) return;
+  const p = (async () => {
+    try {
+      const r = (await get(`/integrations/agent/${agentId}/names`)) as { integrations?: string[] };
+      _agentIntegrationsCache.set(agentId, {
+        names: new Set(r.integrations ?? []),
+        fetchedAt: Date.now(),
+      });
+    } catch (err) {
+      // Don't poison the cache on transient errors. Next factory call retries.
+      console.error(`[agent-manager] failed to fetch integrations for ${agentId}:`, err);
+    } finally {
+      _agentIntegrationsInFlight.delete(agentId);
+    }
+  })();
+  _agentIntegrationsInFlight.set(agentId, p);
+}
+
+/**
+ * Synchronous accessor used inside plugin tool factories.
+ *
+ * Returns the cached connected-integration set for an agent, or `null`
+ * if no cached value exists yet. Triggers a background refresh when the
+ * cache is empty or older than REFRESH_INTERVAL_MS. The next factory
+ * invocation will see the refreshed value.
+ *
+ * Factory callers should treat `null` as "fail open" — register all
+ * tools for the integration on cold start, then rely on the next attempt
+ * (a few hundred ms later, after the async fetch completes) to apply
+ * the filter correctly.
+ */
+export function getAgentIntegrationsSync(agentId: string | undefined): Set<string> | null {
+  if (!agentId) return null;
+  const entry = _agentIntegrationsCache.get(agentId);
+  const now = Date.now();
+  if (!entry) {
+    triggerAgentIntegrationsRefresh(agentId);
+    return null;
+  }
+  if (now - entry.fetchedAt > REFRESH_INTERVAL_MS) {
+    triggerAgentIntegrationsRefresh(agentId);
+  }
+  return entry.names;
 }

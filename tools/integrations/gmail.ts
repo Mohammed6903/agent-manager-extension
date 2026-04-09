@@ -1,12 +1,14 @@
 import { Type } from "@sinclair/typebox";
-import { get, post } from "../../client";
+import { get, post, getAgentIntegrationsSync } from "../../client";
+
+const INTEGRATION_NAME = "gmail";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+const GMAIL_TOOLS = [
+  {
     name: "gmail_email_list",
     description: "List recent emails from an agent's connected Gmail account.",
     parameters: Type.Object({
@@ -17,9 +19,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/gmail/list", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_search",
     description: "Search emails using Gmail's full query syntax.",
     parameters: Type.Object({
@@ -30,9 +31,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/gmail/search", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_read",
     description: "Read the full content of a specific email message.",
     parameters: Type.Object({
@@ -42,9 +42,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/gmail/read", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_batch_read",
     description: "Read multiple emails at once by their message IDs.",
     parameters: Type.Object({
@@ -54,9 +53,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/gmail/batch_read", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_thread",
     description: "Get all messages in an email thread to see the full conversation.",
     parameters: Type.Object({
@@ -66,9 +64,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/gmail/thread", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_send",
     description: "Send a new email from the agent's connected Gmail account.",
     parameters: Type.Object({
@@ -83,9 +80,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/gmail/send", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_reply",
     description: "Reply to an existing email, preserving the thread.",
     parameters: Type.Object({
@@ -99,9 +95,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/gmail/reply", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_modify",
     description: "Add or remove labels on emails (e.g. mark as read by removing UNREAD label).",
     parameters: Type.Object({
@@ -113,9 +108,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/gmail/modify", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_email_attachment",
     description: "Download an attachment from a specific email.",
     parameters: Type.Object({
@@ -126,5 +120,17 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/gmail/attachment", p));
     },
+  },
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose Gmail tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    // The next attempt will see the populated cache and filter correctly.
+    if (cached === null) return GMAIL_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? GMAIL_TOOLS : null;
   });
 }

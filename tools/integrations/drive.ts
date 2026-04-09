@@ -1,12 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { get, post, put, patch, del } from "../../client";
+import { get, post, put, patch, del, getAgentIntegrationsSync } from "../../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+
+const INTEGRATION_NAME = "google_drive";
+
+const INTEGRATION_TOOLS: any[] = [
+{
     name: "drive_list_files",
     description: "List files and folders in the agent's Google Drive.",
     parameters: Type.Object({
@@ -18,14 +21,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/drive/files", p));
     },
-  });
-
-  // upload endpoint restored per updated OpenAPI.  The server will
-  // accept either multipart/form-data (with a binary `file` field) or a
-  // JSON payload containing a base64-encoded `content` string.  This makes
-  // programmatic uploads easier while still working with file uploads from
-  // a browser.
-  api.registerTool({
+  },
+{
     name: "drive_upload_file",
     description: "Upload a file to Google Drive. Provide either `file` (binary) or `content` (base64) along with `agent_id` and optional `parent_id`.",
     parameters: Type.Object({
@@ -43,9 +40,8 @@ export function register(api: any) {
       // otherwise assume binary and let client handle form-data
       return json(await post("/integrations/drive/files", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_download_file",
     description: "Download the content of a Google Drive file as text (for text-based files) or a base64-encoded string (for binary files).",
     parameters: Type.Object({
@@ -58,9 +54,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/drive/files/download", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_get_file",
     description: "Get metadata for a specific Google Drive file or folder.",
     parameters: Type.Object({
@@ -74,12 +69,8 @@ export function register(api: any) {
         }),
       );
     },
-  });
-
-  // upload endpoint removed from server API; POST /drive/files now returns 405.
-  // If upload support is restored, re-add a tool with the correct path and method.
-
-  api.registerTool({
+  },
+{
     name: "drive_update_file",
     description: "Update the content or metadata of an existing Google Drive file.",
     parameters: Type.Object({
@@ -94,9 +85,8 @@ export function register(api: any) {
       const { file_id, ...body } = p;
       return json(await put(`/integrations/drive/files/${encodeURIComponent(file_id)}`, body));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_delete_file",
     description: "Move a Google Drive file or folder to the trash.",
     parameters: Type.Object({
@@ -110,9 +100,8 @@ export function register(api: any) {
         }),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_create_folder",
     description: "Create a new folder in Google Drive.",
     parameters: Type.Object({
@@ -124,9 +113,8 @@ export function register(api: any) {
       // server expects parent_id field
       return json(await post("/integrations/drive/folders", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_move_file",
     description: "Move a Google Drive file to a different folder.",
     parameters: Type.Object({
@@ -140,9 +128,8 @@ export function register(api: any) {
         await api.patch(`/integrations/drive/files/${encodeURIComponent(file_id)}/move`, body),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_rename_file",
     description: "Rename a file or folder in Google Drive.",
     parameters: Type.Object({
@@ -156,10 +143,8 @@ export function register(api: any) {
         await api.patch(`/integrations/drive/files/${encodeURIComponent(file_id)}/rename`, body),
       );
     },
-  });
-
-  // additional management endpoints
-  api.registerTool({
+  },
+{
     name: "drive_list_folders",
     description: "List folders in Google Drive (optionally under a parent).",
     parameters: Type.Object({
@@ -170,9 +155,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/drive/folders", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_delete_folder",
     description: "Delete a folder (moves it to trash).",
     parameters: Type.Object({
@@ -186,9 +170,8 @@ export function register(api: any) {
         }),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_rename_folder",
     description: "Rename a folder in Google Drive.",
     parameters: Type.Object({
@@ -202,9 +185,8 @@ export function register(api: any) {
         await api.patch(`/integrations/drive/folders/${encodeURIComponent(folder_id)}/rename`, body),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_move_folder",
     description: "Move a folder into another parent folder.",
     parameters: Type.Object({
@@ -218,9 +200,8 @@ export function register(api: any) {
         await api.patch(`/integrations/drive/folders/${encodeURIComponent(folder_id)}/move`, body),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "drive_share_file",
     description: "Share a Google Drive file or folder with another user.",
     parameters: Type.Object({
@@ -234,5 +215,16 @@ export function register(api: any) {
       const { file_id, ...body } = p;
       return json(await post(`/integrations/drive/files/${encodeURIComponent(file_id)}/share`, body));
     },
+  }
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose these tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    if (cached === null) return INTEGRATION_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? INTEGRATION_TOOLS : null;
   });
 }

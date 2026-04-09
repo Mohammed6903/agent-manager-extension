@@ -1,12 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { get, post, put, del } from "../../client";
+import { get, post, put, del, getAgentIntegrationsSync } from "../../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+
+const INTEGRATION_NAME = "google_sheets";
+
+const INTEGRATION_TOOLS: any[] = [
+{
     name: "sheets_list_spreadsheets",
     description: "List Google Sheets spreadsheets accessible to the agent.",
     parameters: Type.Object({
@@ -17,9 +20,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/sheets/spreadsheets", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_get_spreadsheet",
     description: "Get metadata and sheet list for a specific Google Sheets spreadsheet.",
     parameters: Type.Object({
@@ -33,9 +35,8 @@ export function register(api: any) {
         }),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_create_spreadsheet",
     description: "Create a new Google Sheets spreadsheet.",
       parameters: Type.Object({
@@ -47,9 +48,8 @@ export function register(api: any) {
         const { agent_id, title } = p;
         return json(await post("/integrations/sheets/spreadsheets", { agent_id, title }));
       },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_get_values",
     description: "Read cell values from a range in a Google Sheets spreadsheet.",
     parameters: Type.Object({
@@ -65,9 +65,8 @@ export function register(api: any) {
         ),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_update_values",
     description: "Write cell values to a range in a Google Sheets spreadsheet.",
     parameters: Type.Object({
@@ -90,9 +89,8 @@ export function register(api: any) {
         ),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_append_values",
     description: "Append rows of data after the last row with content in a Google Sheet.",
     parameters: Type.Object({
@@ -115,9 +113,8 @@ export function register(api: any) {
         ),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_clear_values",
     description: "Clear all values from a range in a Google Sheets spreadsheet (formatting is preserved).",
     parameters: Type.Object({
@@ -134,9 +131,8 @@ export function register(api: any) {
         ),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "sheets_delete_spreadsheet",
     description: "Permanently delete a Google Sheets spreadsheet (moves it to trash via Drive).",
     parameters: Type.Object({
@@ -150,5 +146,16 @@ export function register(api: any) {
         }),
       );
     },
+  }
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose these tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    if (cached === null) return INTEGRATION_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? INTEGRATION_TOOLS : null;
   });
 }

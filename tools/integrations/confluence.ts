@@ -1,12 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { post } from "../../client";
+import { post, getAgentIntegrationsSync } from "../../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+
+const INTEGRATION_NAME = "confluence";
+
+const INTEGRATION_TOOLS: any[] = [
+{
     name: "confluence_request",
     description:
       "Execute an API request against Confluence. Confluence wiki (pages, spaces, search with CQL). " +
@@ -21,5 +24,16 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/confluence/request", p));
     },
+  }
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose these tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    if (cached === null) return INTEGRATION_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? INTEGRATION_TOOLS : null;
   });
 }

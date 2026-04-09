@@ -1,16 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { get, post, patch, del } from "../../client";
+import { get, post, patch, del, getAgentIntegrationsSync } from "../../client";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  // ---------------------------------------------------------------------------
-  // Search
-  // ---------------------------------------------------------------------------
 
-  api.registerTool({
+const INTEGRATION_NAME = "notion";
+
+const INTEGRATION_TOOLS: any[] = [
+{
     name: "notion_search",
     description:
       "Search pages and databases in the connected Notion workspace. " +
@@ -33,13 +32,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/notion/search", p));
     },
-  });
-
-  // ---------------------------------------------------------------------------
-  // Pages
-  // ---------------------------------------------------------------------------
-
-  api.registerTool({
+  },
+{
     name: "notion_page_create",
     description:
       "Create a new Notion page. Requires a parent (database or page) and properties matching the parent schema. " +
@@ -57,9 +51,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/notion/pages", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_page_get",
     description: "Retrieve a Notion page by its ID. Returns the page object with properties.",
     parameters: Type.Object({
@@ -71,9 +64,8 @@ export function register(api: any) {
         await get(`/integrations/notion/pages/${encodeURIComponent(p.page_id)}`, p),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_page_update",
     description:
       "Update Notion page properties, icon, or cover. Set archived=true to archive (delete) the page.",
@@ -91,13 +83,8 @@ export function register(api: any) {
         await patch(`/integrations/notion/pages/${encodeURIComponent(page_id)}`, body),
       );
     },
-  });
-
-  // ---------------------------------------------------------------------------
-  // Blocks (page content)
-  // ---------------------------------------------------------------------------
-
-  api.registerTool({
+  },
+{
     name: "notion_block_children_get",
     description:
       "Retrieve block children (page content). Pass a page ID or block ID to read its content blocks.",
@@ -112,9 +99,8 @@ export function register(api: any) {
         await get(`/integrations/notion/blocks/${encodeURIComponent(p.block_id)}/children`, p),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_block_children_append",
     description:
       "Append new content blocks to a page or block. Pass children as an array of block objects.",
@@ -130,9 +116,8 @@ export function register(api: any) {
         await patch(`/integrations/notion/blocks/${encodeURIComponent(block_id)}/children`, body),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_block_update",
     description:
       "Update a specific block's content. Pass block_data as the block type object with updated content, " +
@@ -151,9 +136,8 @@ export function register(api: any) {
         await patch(`/integrations/notion/blocks/${encodeURIComponent(block_id)}`, body),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_block_delete",
     description: "Delete (archive) a specific block by its ID.",
     parameters: Type.Object({
@@ -165,13 +149,8 @@ export function register(api: any) {
         await del(`/integrations/notion/blocks/${encodeURIComponent(p.block_id)}`, p),
       );
     },
-  });
-
-  // ---------------------------------------------------------------------------
-  // Databases
-  // ---------------------------------------------------------------------------
-
-  api.registerTool({
+  },
+{
     name: "notion_database_create",
     description:
       "Create a new Notion database. Requires a parent page, title, and property schema.",
@@ -184,9 +163,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/notion/databases", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_database_get",
     description: "Retrieve a Notion database by its ID. Returns the database object with its schema.",
     parameters: Type.Object({
@@ -198,9 +176,8 @@ export function register(api: any) {
         await get(`/integrations/notion/databases/${encodeURIComponent(p.database_id)}`, p),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_database_query",
     description:
       "Query a Notion database to retrieve its rows/pages. Supports filtering and sorting. " +
@@ -224,9 +201,8 @@ export function register(api: any) {
         ),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_database_update",
     description: "Update a Notion database's title or property schema.",
     parameters: Type.Object({
@@ -246,13 +222,8 @@ export function register(api: any) {
         ),
       );
     },
-  });
-
-  // ---------------------------------------------------------------------------
-  // Users
-  // ---------------------------------------------------------------------------
-
-  api.registerTool({
+  },
+{
     name: "notion_users_list",
     description: "List all users in the connected Notion workspace.",
     parameters: Type.Object({
@@ -261,9 +232,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/notion/users", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_user_get",
     description: "Retrieve a specific user by their Notion user ID.",
     parameters: Type.Object({
@@ -275,9 +245,8 @@ export function register(api: any) {
         await get(`/integrations/notion/users/${encodeURIComponent(p.user_id)}`, p),
       );
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_bot_user_get",
     description: "Get the bot user associated with the Notion integration token.",
     parameters: Type.Object({
@@ -286,13 +255,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/notion/users/me", p));
     },
-  });
-
-  // ---------------------------------------------------------------------------
-  // Comments
-  // ---------------------------------------------------------------------------
-
-  api.registerTool({
+  },
+{
     name: "notion_comment_create",
     description:
       "Create a comment on a Notion page or discussion thread. " +
@@ -308,9 +272,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/notion/comments", p));
     },
-  });
-
-  api.registerTool({
+  },
+{
     name: "notion_comments_get",
     description: "Retrieve comments for a specific Notion block or page.",
     parameters: Type.Object({
@@ -322,5 +285,16 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/integrations/notion/comments", p));
     },
+  }
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose these tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    if (cached === null) return INTEGRATION_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? INTEGRATION_TOOLS : null;
   });
 }

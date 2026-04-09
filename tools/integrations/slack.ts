@@ -1,13 +1,15 @@
 import { Type } from "@sinclair/typebox";
-import { post } from "../../client";
+import { post, getAgentIntegrationsSync } from "../../client";
+
+const INTEGRATION_NAME = "slack";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
+const SLACK_TOOLS = [
   // Channels
-  api.registerTool({
+  {
     name: "slack_channels_list",
     description: "List channels in the connected Slack workspace.",
     parameters: Type.Object({
@@ -19,9 +21,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/conversations/list", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "slack_channel_info",
     description: "Get detailed info about a Slack channel.",
     parameters: Type.Object({
@@ -31,9 +32,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/conversations/info", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "slack_channel_create",
     description: "Create a new Slack channel.",
     parameters: Type.Object({
@@ -44,9 +44,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/conversations/create", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "slack_channel_history",
     description: "Get message history from a Slack channel.",
     parameters: Type.Object({
@@ -60,10 +59,9 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/conversations/history", p));
     },
-  });
-
+  },
   // Messages
-  api.registerTool({
+  {
     name: "slack_message_send",
     description: "Send a message to a Slack channel.",
     parameters: Type.Object({
@@ -76,9 +74,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/chat/postMessage", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "slack_message_update",
     description: "Update an existing Slack message.",
     parameters: Type.Object({
@@ -91,9 +88,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/chat/update", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "slack_message_delete",
     description: "Delete a Slack message.",
     parameters: Type.Object({
@@ -104,10 +100,9 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/chat/delete", p));
     },
-  });
-
+  },
   // Users
-  api.registerTool({
+  {
     name: "slack_users_list",
     description: "List all users in the Slack workspace.",
     parameters: Type.Object({
@@ -118,9 +113,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/users/list", p));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "slack_user_info",
     description: "Get info about a Slack user.",
     parameters: Type.Object({
@@ -130,10 +124,9 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/users/info", p));
     },
-  });
-
+  },
   // Reactions
-  api.registerTool({
+  {
     name: "slack_reaction_add",
     description: "Add an emoji reaction to a Slack message.",
     parameters: Type.Object({
@@ -145,10 +138,9 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/reactions/add", p));
     },
-  });
-
+  },
   // Files
-  api.registerTool({
+  {
     name: "slack_files_list",
     description: "List files shared in the Slack workspace.",
     parameters: Type.Object({
@@ -160,5 +152,17 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await post("/integrations/slack/files/list", p));
     },
+  },
+];
+
+export function register(api: any) {
+  // Per-agent tool factory: only expose Slack tools to agents that have
+  // the integration assigned. See client.ts for the cache strategy.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    // Cold start (cache not warm yet) → fail-open with all tools.
+    // The next attempt will see the populated cache and filter correctly.
+    if (cached === null) return SLACK_TOOLS;
+    return cached.has(INTEGRATION_NAME) ? SLACK_TOOLS : null;
   });
 }

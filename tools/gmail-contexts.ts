@@ -1,12 +1,17 @@
 import { Type } from "@sinclair/typebox";
-import { get, del } from "../client";
+import { get, del, getAgentIntegrationsSync } from "../client";
+
+const GMAIL_INTEGRATION = "gmail";
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function register(api: any) {
-  api.registerTool({
+// Generic third-party context tools — always available regardless of which
+// integrations the agent has connected. The agent uses these to discover
+// and manage any third-party context (Gmail, Slack, etc.).
+const ALWAYS_ON_CONTEXT_TOOLS = [
+  {
     name: "thirdparty_context_list",
     description: "List all third party contexts assigned to an agent.",
     parameters: Type.Object({
@@ -16,9 +21,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get("/contexts/third-party", { agent_id: p.agent_id, user_id: p.user_id }));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "thirdparty_context_get",
     description: "Get a specific Third Party context by its ID with status information.",
     parameters: Type.Object({
@@ -28,9 +32,8 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await get(`/contexts/third-party/${encodeURIComponent(p.context_id)}`, { user_id: p.user_id }));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "thirdparty_context_delete",
     description: "Delete a Third Party context and its associated data (S3, Qdrant, DB).",
     parameters: Type.Object({
@@ -40,9 +43,14 @@ export function register(api: any) {
     async execute(_id: string, p: any) {
       return json(await del(`/contexts/third-party/${encodeURIComponent(p.context_id)}`, { user_id: p.user_id }));
     },
-  });
+  },
+];
 
-  api.registerTool({
+// Gmail-specific search tools — only exposed to agents with the gmail
+// integration assigned. These exist alongside the tools in
+// tools/integrations/gmail.ts and use the same gmail integration name.
+const GMAIL_SEARCH_TOOLS = [
+  {
     name: "gmail_search_semantic",
     description: "Semantic search over all stored Gmail embeddings. Returns ranked, deduplicated results by message.",
     parameters: Type.Object({
@@ -62,9 +70,8 @@ export function register(api: any) {
       if (p.has_attachment !== undefined) params.append("has_attachment", String(p.has_attachment));
       return json(await get(`/integrations/gmail/search/semantic?${params}`));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_search_snapshot",
     description: "Lightweight recent email summary for agent session context.",
     parameters: Type.Object({
@@ -76,9 +83,8 @@ export function register(api: any) {
       if (p.hours !== undefined) params.append("hours", String(p.hours));
       return json(await get(`/integrations/gmail/search/snapshot?${params}`));
     },
-  });
-
-  api.registerTool({
+  },
+  {
     name: "gmail_search_full",
     description: "Fetch full email body from S3 by message_id. Only call when agent needs complete content.",
     parameters: Type.Object({
@@ -92,5 +98,19 @@ export function register(api: any) {
       });
       return json(await get(`/integrations/gmail/search/full?${params}`));
     },
+  },
+];
+
+export function register(api: any) {
+  // Always-on generic context tools
+  for (const tool of ALWAYS_ON_CONTEXT_TOOLS) {
+    api.registerTool(tool);
+  }
+
+  // Gmail-specific search tools — gated on gmail integration assignment.
+  api.registerTool((ctx: any) => {
+    const cached = getAgentIntegrationsSync(ctx?.agentId);
+    if (cached === null) return GMAIL_SEARCH_TOOLS;
+    return cached.has(GMAIL_INTEGRATION) ? GMAIL_SEARCH_TOOLS : null;
   });
 }
