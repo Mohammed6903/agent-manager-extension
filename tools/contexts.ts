@@ -119,4 +119,61 @@ export function register(api: any) {
       return json(await get(`/contexts/${encodeURIComponent(context_id)}/content`, { agent_id }));
     },
   });
+
+  api.registerTool({
+    name: "context_search",
+    description:
+      "Semantic search across the knowledge contexts (documents) assigned " +
+      "to this agent. Returns the top-matching text chunks ranked by " +
+      "relevance to the query.\n\n" +
+      "CALL THIS PROACTIVELY whenever the user asks about:\n" +
+      "  - A specific name, product, company, person, or project you don't " +
+      "recognize from your training data (e.g. internal codenames, " +
+      "in-house tools, private entities)\n" +
+      "  - A term, acronym, policy, or process that looks like it might be " +
+      "user-specific or organization-specific\n" +
+      "  - Anything the user implies they already told you about but you " +
+      "don't have in the current conversation\n\n" +
+      "Do NOT assume a topic is unknown to the user just because you don't " +
+      "know it — search first. Contexts are the user's own knowledge " +
+      "documents (handbooks, FAQs, runbooks, notes), not the public web.\n\n" +
+      "If the search returns no chunks, THEN tell the user you don't have " +
+      "context about the topic. Don't tell them 'I don't know' without " +
+      "searching first.",
+    parameters: Type.Object({
+      query: Type.String({
+        description:
+          "Natural-language query — a phrase or short sentence capturing " +
+          "what the user wants to know. The query is embedded and matched " +
+          "against chunk text; use the terminology the user used.",
+      }),
+      agent_id: Type.String({
+        description:
+          "The agent ID whose assigned contexts should be searched. Use the " +
+          "agent's own identifier from your session.",
+      }),
+      top_k: Type.Optional(
+        Type.Integer({
+          minimum: 1,
+          maximum: 20,
+          default: 5,
+          description:
+            "Number of top chunks to return. Default 5 is usually enough; " +
+            "raise it only if the first search returned partial or ambiguous results.",
+        }),
+      ),
+    }),
+    async execute(_id: string, p: any) {
+      // The backend endpoint takes its inputs as URL query params
+      // (FastAPI Query(...)), not a JSON body. Pass them via the client's
+      // third argument and leave the body undefined.
+      return json(
+        await post("/contexts/search", undefined, {
+          agent_id: p.agent_id,
+          query: p.query,
+          top_k: p.top_k ?? 5,
+        }),
+      );
+    },
+  });
 }
