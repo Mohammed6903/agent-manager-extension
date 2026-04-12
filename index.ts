@@ -7,6 +7,7 @@
  */
 
 import { configure, triggerAgentIntegrationsRefresh } from "./client";
+import { installPublicQaGuard } from "./tools/qa-guard";
 import { register as registerTasks } from "./tools/tasks";
 import { register as registerCron } from "./tools/cron";
 import { register as registerContexts } from "./tools/contexts";
@@ -81,6 +82,12 @@ export function register(api: any) {
   // Apply injected config from OpenClaw (openclaw.json → plugins.entries.agent-manager.config)
   const config = api.config || {};
   configure({ baseUrl: config.baseUrl });
+
+  // Install the public-Q&A guard BEFORE any sub-module registers its tools.
+  // This wraps api.registerTool once so every subsequent registration is
+  // automatically filtered by the ctx.messageChannel == "public-qa" check.
+  // See tools/qa-guard.ts for the allowlist and rationale.
+  installPublicQaGuard(api);
 
   const product = config.productType || "network_chain";
 
