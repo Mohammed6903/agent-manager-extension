@@ -81,7 +81,7 @@ export const name = "Agent Manager";
 export function register(api: any) {
   // Apply injected config from OpenClaw (openclaw.json → plugins.entries.agent-manager.config)
   const config = api.config || {};
-  configure({ baseUrl: config.baseUrl });
+  configure({ baseUrl: config.baseUrl, serviceSecret: config.serviceSecret });
 
   // Install the public-Q&A guard BEFORE any sub-module registers its tools.
   // This wraps api.registerTool once so every subsequent registration is

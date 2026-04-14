@@ -13,13 +13,23 @@
  */
 
 let BASE_URL = "http://localhost:8000/api";
+// Shared service-auth secret. OpenClawApi rejects non-public requests
+// without `Authorization: Bearer <secret>`. This plugin is the only
+// legitimate internal caller besides roam-backend, so we pass the
+// secret in via the plugin's injected config (never from env — the
+// installer scanner rejects env+network combos). Empty = enforcement
+// disabled on OpenClawApi, requests go through unchanged.
+let SERVICE_SECRET = "";
 
 /**
  * Called once from the plugin entry point to apply config from OpenClaw.
  */
-export function configure(config: { baseUrl?: string }) {
+export function configure(config: { baseUrl?: string; serviceSecret?: string }) {
   if (config.baseUrl) {
     BASE_URL = config.baseUrl.replace(/\/+$/, "");
+  }
+  if (typeof config.serviceSecret === "string") {
+    SERVICE_SECRET = config.serviceSecret;
   }
 }
 
@@ -42,10 +52,11 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
 
 async function request(method: string, path: string, opts: RequestOptions = {}): Promise<unknown> {
   const url = buildUrl(path, opts.params);
-  const init: RequestInit = {
-    method,
-    headers: { "Content-Type": "application/json" },
-  };
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (SERVICE_SECRET) {
+    headers["Authorization"] = `Bearer ${SERVICE_SECRET}`;
+  }
+  const init: RequestInit = { method, headers };
   if (opts.body !== undefined) {
     init.body = JSON.stringify(opts.body);
   }
