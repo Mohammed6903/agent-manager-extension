@@ -15,6 +15,10 @@
         "type": "string",
         "enum": ["garage", "network_chain"],
         "description": "Product type — controls which tools are registered. 'garage' includes Garage feed tools, 'network_chain' includes chat delivery tools. Default: garage"
+      },
+      "serviceSecret": {
+        "type": "string",
+        "description": "Shared service-auth secret sent as Authorization: Bearer on every Agent Manager API call. Must match OPENCLAW_SERVICE_SECRET on the Agent Manager server. Leave empty when the server hasn't enabled enforcement yet."
       }
     }
   },
@@ -26,6 +30,10 @@
     "productType": {
       "label": "Product Type",
       "placeholder": "garage"
+    },
+    "serviceSecret": {
+      "label": "Service Secret",
+      "placeholder": "(paste OPENCLAW_SERVICE_SECRET from the server)"
     }
   }
 }
