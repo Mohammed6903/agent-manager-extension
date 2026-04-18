@@ -24,6 +24,8 @@ import * as path from "path";
 
 const SECRET_FILE = path.join(os.homedir(), ".openclaw", "agent-manager.secret");
 const PRODUCT_TYPE_FILE = path.join(os.homedir(), ".openclaw", "agent-manager.product-type");
+const CONTACTS_BACKEND_URL_FILE = path.join(os.homedir(), ".openclaw", "contacts-backend.url");
+const CONTACTS_BACKEND_SECRET_FILE = path.join(os.homedir(), ".openclaw", "contacts-backend.secret");
 
 function readSecretFile(): string {
   try {
@@ -63,6 +65,71 @@ export function readProductTypeFile(): string {
     return contents;
   } catch {
     return "";
+  }
+}
+
+function readContactsBackendUrl(): string {
+  try {
+    return fs.readFileSync(CONTACTS_BACKEND_URL_FILE, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+function readContactsBackendSecret(): string {
+  try {
+    return fs.readFileSync(CONTACTS_BACKEND_SECRET_FILE, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * POST a chat-turn batch to contacts-backend's service-to-service endpoint
+ * `/networkchain-messages/internal`. Used by tools that generate messages
+ * out-of-band (e.g. deliver_chat_message from a cron run) so the message
+ * lands in the Mongo-backed chat history even though there's no user JWT
+ * in scope to use the regular /networkchain-messages endpoint.
+ *
+ * Returns true on successful save. Returns false (and logs) if the
+ * URL / secret aren't configured, or the request fails — callers should
+ * still proceed with whatever else they were doing (e.g. triggering a WS
+ * broadcast) rather than blocking on this save.
+ */
+export async function saveMessagesToContactsBackend(payload: {
+  user_id: string;
+  agentId: string;
+  sessionId: string;
+  messages: { role: "user" | "assistant"; content: string }[];
+}): Promise<boolean> {
+  const url = readContactsBackendUrl();
+  const secret = readContactsBackendSecret();
+  if (!url || !secret) {
+    console.warn(
+      "[agent-manager] contacts-backend URL/secret not configured, skipping chat-history save",
+    );
+    return false;
+  }
+  try {
+    const res = await fetch(`${url.replace(/\/+$/, "")}/networkchain-messages/internal`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Api-Key": secret,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(
+        `[agent-manager] contacts-backend save failed: HTTP ${res.status} ${text.slice(0, 200)}`,
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[agent-manager] contacts-backend save threw:", err);
+    return false;
   }
 }
 
