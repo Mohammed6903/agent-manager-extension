@@ -112,11 +112,33 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
   return url.toString();
 }
 
+/** Extract a user_id value from the tool's params/body so we can promote
+ *  it to the x-user-id identity header. The server's auth middleware +
+ *  get_user_id dependency read identity from x-user-id, not from query
+ *  strings or body fields. Tools still pass user_id the old way too —
+ *  this just mirrors it into a header where the server expects it. */
+function pickUserId(opts: RequestOptions): string | undefined {
+  const fromParams = opts.params?.user_id;
+  if (fromParams !== undefined && fromParams !== null && String(fromParams) !== "") {
+    return String(fromParams);
+  }
+  const body = opts.body;
+  if (body && typeof body === "object") {
+    const uid = (body as Record<string, unknown>).user_id;
+    if (typeof uid === "string" && uid) return uid;
+  }
+  return undefined;
+}
+
 async function request(method: string, path: string, opts: RequestOptions = {}): Promise<unknown> {
   const url = buildUrl(path, opts.params);
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (SERVICE_SECRET) {
     headers["Authorization"] = `Bearer ${SERVICE_SECRET}`;
+  }
+  const userId = pickUserId(opts);
+  if (userId) {
+    headers["x-user-id"] = userId;
   }
   const init: RequestInit = { method, headers };
   if (opts.body !== undefined) {
