@@ -22,15 +22,6 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
-let BASE_URL = "http://localhost:8000/api";
-// Shared service-auth secret. OpenClawApi rejects non-public requests
-// without `Authorization: Bearer <secret>`. This plugin is the only
-// legitimate internal caller besides roam-backend, so we pass the
-// secret in via the plugin's injected config (never from env — the
-// installer scanner rejects env+network combos). Empty = enforcement
-// disabled on OpenClawApi, requests go through unchanged.
-let SERVICE_SECRET = "";
-
 const SECRET_FILE = path.join(os.homedir(), ".openclaw", "agent-manager.secret");
 const PRODUCT_TYPE_FILE = path.join(os.homedir(), ".openclaw", "agent-manager.product-type");
 
@@ -42,6 +33,18 @@ function readSecretFile(): string {
     return "";
   }
 }
+
+let BASE_URL = "http://localhost:8000/api";
+// Shared service-auth secret. OpenClawApi rejects non-public requests
+// without `Authorization: Bearer <secret>`. This plugin is the only
+// legitimate internal caller besides roam-backend.
+//
+// Initialise from the file fallback at module load time so tool calls
+// executed in a subprocess/sandbox (where configure() from register()
+// never runs again) still pick up the secret. configure() can still
+// override at runtime when openclaw's plugin loader delivers a scoped
+// config with serviceSecret set.
+let SERVICE_SECRET = readSecretFile();
 
 /**
  * Sibling of readSecretFile for productType. Same rationale: when
