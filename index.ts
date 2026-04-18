@@ -81,6 +81,10 @@ export const name = "Agent Manager";
 export function register(api: any) {
   // Apply injected config from OpenClaw (openclaw.json → plugins.entries.agent-manager.config)
   const config = api.config || {};
+  const injectedKeys = Object.keys(config);
+  console.log(
+    `[agent-manager] register() api.config keys=[${injectedKeys.join(",")}] hasServiceSecret=${typeof config.serviceSecret === "string" && config.serviceSecret.length > 0}`,
+  );
   configure({ baseUrl: config.baseUrl, serviceSecret: config.serviceSecret });
 
   // Install the public-Q&A guard BEFORE any sub-module registers its tools.
