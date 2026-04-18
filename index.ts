@@ -6,7 +6,7 @@
  * integrations, gmail, calendar, sheets, drive, auth, secrets, notion, and garage.
  */
 
-import { configure, triggerAgentIntegrationsRefresh } from "./client";
+import { configure, readProductTypeFile, triggerAgentIntegrationsRefresh } from "./client";
 import { installPublicQaGuard } from "./tools/qa-guard";
 import { register as registerTasks } from "./tools/tasks";
 import { register as registerCron } from "./tools/cron";
@@ -93,7 +93,24 @@ export function register(api: any) {
   // See tools/qa-guard.ts for the allowlist and rationale.
   installPublicQaGuard(api);
 
-  const product = config.productType || "network_chain";
+  // Resolve productType with the same fallback strategy as serviceSecret:
+  //   1. injected config (normal path)
+  //   2. ~/.openclaw/agent-manager.product-type  (hack around loader bug)
+  //   3. "network_chain" default
+  // This matters for prod Garage where productType must be "garage" and
+  // silently defaulting to network_chain would hide garage-specific tools.
+  const productFromFile = readProductTypeFile();
+  const product =
+    (typeof config.productType === "string" && config.productType) ||
+    productFromFile ||
+    "network_chain";
+  console.log(
+    `[agent-manager] product=${product} (source=${
+      config.productType ? "api.config.productType"
+        : productFromFile ? `file(~/.openclaw/agent-manager.product-type)`
+        : "default"
+    })`,
+  );
 
   registerTasks(api);
   registerCron(api);

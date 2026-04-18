@@ -32,10 +32,31 @@ let BASE_URL = "http://localhost:8000/api";
 let SERVICE_SECRET = "";
 
 const SECRET_FILE = path.join(os.homedir(), ".openclaw", "agent-manager.secret");
+const PRODUCT_TYPE_FILE = path.join(os.homedir(), ".openclaw", "agent-manager.product-type");
 
 function readSecretFile(): string {
   try {
     const contents = fs.readFileSync(SECRET_FILE, "utf8").trim();
+    return contents;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Sibling of readSecretFile for productType. Same rationale: when
+ * openclaw's plugin loader passes the wrong config scope (seen in
+ * production — the root openclaw.json arrives instead of the scoped
+ * plugins.entries.agent-manager.config subtree), index.ts can fall back
+ * to this file to tell garage/network_chain apart.
+ *
+ * Accepts plain text "garage" or "network_chain"; trims whitespace.
+ * Returns "" if file missing or empty so callers can apply their
+ * default.
+ */
+export function readProductTypeFile(): string {
+  try {
+    const contents = fs.readFileSync(PRODUCT_TYPE_FILE, "utf8").trim();
     return contents;
   } catch {
     return "";
